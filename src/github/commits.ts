@@ -1,5 +1,6 @@
 import type { RestEndpointMethods } from '@octokit/plugin-rest-endpoint-methods/dist-types/generated/method-types'
 import { Commit } from './type'
+import * as core from '@actions/core'
 import {
   parser,
   toConventionalChangelogFormat
@@ -26,7 +27,10 @@ export async function getCommits(
     })
 
     const totalCommits = rawCommits.data.total_commits || 0
-    const rangeCommits = rawCommits.data.commits || ([] as Commit[])
+
+    const rangeCommits = rawCommits.data.commits
+
+    console.log(rangeCommits)
 
     // convert rangeCommits to commits
     commits.push(...rangeCommits)
@@ -37,6 +41,7 @@ export async function getCommits(
   }
 
   if (!commits.length) {
+    core.info('No commits found')
   }
 
   return commits as Commit[]
@@ -54,16 +59,17 @@ export async function parseCommits(
   for (const commit of commits) {
     try {
       const cast = toConventionalChangelogFormat(parser(commit.commit.message))
+      console.log(cast.type)
       switch (cast.type) {
-        case 'major':
+        case 'breaking':
           breaking.push(commit.commit.message)
           break
-        case 'minor':
+
+        case 'feature':
           features.push(commit.commit.message)
           break
 
-        case 'patch':
-        case 'patchAll':
+        case 'fix':
           fixes.push(commit.commit.message)
           break
       }
@@ -73,7 +79,10 @@ export async function parseCommits(
           breaking.push(commit.commit.message)
         }
       }
-    } catch (err: any) {}
+    } catch (err: any) {
+      core.debug(err)
+      core.warning(`Failed to parse commit: ${commit.commit.message}`)
+    }
   }
 
   return [breaking, features, fixes]

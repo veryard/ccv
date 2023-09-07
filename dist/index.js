@@ -13879,12 +13879,36 @@ function wrappy (fn, cb) {
 /***/ }),
 
 /***/ 8366:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.parseCommits = exports.getCommits = void 0;
+const core = __importStar(__nccwpck_require__(2186));
 const parser_1 = __nccwpck_require__(4523);
 async function getCommits(rest, owner, repo, branch, latestTag) {
     let currentPage = 0;
@@ -13898,9 +13922,9 @@ async function getCommits(rest, owner, repo, branch, latestTag) {
             page: currentPage,
             per_page: 100
         });
-        console.log(rawCommits);
         const totalCommits = rawCommits.data.total_commits || 0;
-        const rangeCommits = rawCommits.data.commits || [];
+        const rangeCommits = rawCommits.data.commits;
+        console.log(rangeCommits);
         // convert rangeCommits to commits
         commits.push(...rangeCommits);
         if (rangeCommits.length < 100 || commits.length >= totalCommits) {
@@ -13908,6 +13932,7 @@ async function getCommits(rest, owner, repo, branch, latestTag) {
         }
     }
     if (!commits.length) {
+        core.info('No commits found');
     }
     return commits;
 }
@@ -13919,15 +13944,15 @@ async function parseCommits(commits, prefix, latestTag) {
     for (const commit of commits) {
         try {
             const cast = (0, parser_1.toConventionalChangelogFormat)((0, parser_1.parser)(commit.commit.message));
+            console.log(cast.type);
             switch (cast.type) {
-                case 'major':
+                case 'breaking':
                     breaking.push(commit.commit.message);
                     break;
-                case 'minor':
+                case 'feature':
                     features.push(commit.commit.message);
                     break;
-                case 'patch':
-                case 'patchAll':
+                case 'fix':
                     fixes.push(commit.commit.message);
                     break;
             }
@@ -13937,7 +13962,10 @@ async function parseCommits(commits, prefix, latestTag) {
                 }
             }
         }
-        catch (err) { }
+        catch (err) {
+            core.debug(err);
+            core.warning(`Failed to parse commit: ${commit.commit.message}`);
+        }
     }
     return [breaking, features, fixes];
 }
@@ -14060,6 +14088,7 @@ async function run() {
         return core.setFailed(err.message);
     }
     const [breaking, features, fixes] = await (0, commits_1.parseCommits)(commits, prefix, latestTag);
+    console.log(breaking, features, fixes);
     let nextVersion = await (0, version_1.bumpVersion)(breaking.length, features.length, fixes.length, latestTag);
     core.info(`Next version: ${nextVersion}`);
     core.exportVariable('next', `${prefix}${nextVersion}`);
@@ -14073,23 +14102,50 @@ run();
 /***/ }),
 
 /***/ 1946:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.bumpVersion = void 0;
 const semver_1 = __nccwpck_require__(1383);
+const core = __importStar(__nccwpck_require__(2186));
 async function bumpVersion(breaking, features, fixes, version) {
     let next = version;
     if (breaking > 0) {
-        (0, semver_1.inc)(next, 'major');
+        next = (0, semver_1.inc)(next, 'major');
     }
     else if (features > 0) {
-        (0, semver_1.inc)(next, 'minor');
+        next = (0, semver_1.inc)(next, 'minor');
     }
     else if (fixes > 0) {
-        (0, semver_1.inc)(next, 'patch');
+        next = (0, semver_1.inc)(next, 'patch');
+    }
+    if (next == null) {
+        core.info('No new version');
     }
     return next;
 }

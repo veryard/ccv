@@ -46,6 +46,11 @@ export async function run(): Promise<void> {
     prefix,
     latestTag
   )
+
+  core.debug(`Breaking changes count: ${breaking.length}`)
+  core.debug(`Features count: ${features.length}`)
+  core.debug(`Fixes count: ${fixes.length}`)
+
   let nextVersion = await bumpVersion(
     breaking.length,
     features.length,

@@ -1,4 +1,5 @@
-import { inc, clean } from 'semver'
+import { inc } from 'semver'
+import * as core from '@actions/core'
 
 export async function bumpVersion(
   breaking: number,
@@ -6,15 +7,18 @@ export async function bumpVersion(
   fixes: number,
   version: string
 ): Promise<string> {
-  let next = version
-
+  let next: string | null = version
   if (breaking > 0) {
-    inc(next, 'major')
+    next = inc(next, 'major')
   } else if (features > 0) {
-    inc(next, 'minor')
+    next = inc(next, 'minor')
   } else if (fixes > 0) {
-    inc(next, 'patch')
+    next = inc(next, 'patch')
   }
 
-  return next
+  if (next == null) {
+    core.info('No new version')
+  }
+
+  return next!
 }
