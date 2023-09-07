@@ -14088,7 +14088,9 @@ async function run() {
         return core.setFailed(err.message);
     }
     const [breaking, features, fixes] = await (0, commits_1.parseCommits)(commits, prefix, latestTag);
-    console.log(breaking, features, fixes);
+    core.debug(`Breaking changes count: ${breaking.length}`);
+    core.debug(`Features count: ${features.length}`);
+    core.debug(`Fixes count: ${fixes.length}`);
     let nextVersion = await (0, version_1.bumpVersion)(breaking.length, features.length, fixes.length, latestTag);
     core.info(`Next version: ${nextVersion}`);
     core.exportVariable('next', `${prefix}${nextVersion}`);

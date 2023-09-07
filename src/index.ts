@@ -42,9 +42,7 @@ export async function run(): Promise<void> {
   }
 
   const [breaking, features, fixes] = await parseCommits(
-    commits,
-    prefix,
-    latestTag
+    commits
   )
 
   core.debug(`Breaking changes count: ${breaking.length}`)

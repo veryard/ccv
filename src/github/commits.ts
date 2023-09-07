@@ -27,12 +27,8 @@ export async function getCommits(
     })
 
     const totalCommits = rawCommits.data.total_commits || 0
-
     const rangeCommits = rawCommits.data.commits
 
-    console.log(rangeCommits)
-
-    // convert rangeCommits to commits
     commits.push(...rangeCommits)
 
     if (rangeCommits.length < 100 || commits.length >= totalCommits) {
@@ -48,9 +44,7 @@ export async function getCommits(
 }
 
 export async function parseCommits(
-  commits: Commit[],
-  prefix: string,
-  latestTag: string
+  commits: Commit[]
 ): Promise<[string[], string[], string[]]> {
   const breaking = []
   const features = []
@@ -59,7 +53,6 @@ export async function parseCommits(
   for (const commit of commits) {
     try {
       const cast = toConventionalChangelogFormat(parser(commit.commit.message))
-      console.log(cast.type)
       switch (cast.type) {
         case 'breaking':
           breaking.push(commit.commit.message)
