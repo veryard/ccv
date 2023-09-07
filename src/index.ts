@@ -1,28 +1,46 @@
 import * as core from '@actions/core'
-import { wait } from './wait'
+import * as github from '@actions/github'
+import { getLatestVersion } from './github/tags'
+import { getCommits, parseCommits } from './github/commits';
+import { Commit } from './github/type';
+import { bumpVersion } from './version';
 
 /**
  * The main function for the action.
  * @returns {Promise<void>} Resolves when the action is complete.
  */
 export async function run(): Promise<void> {
+  const token = core.getInput('token');
+  const branch = core.getInput('branch');
+  const octokit = github.getOctokit(token);
+  const { owner, repo } = github.context.repo;
+  const prefix = core.getInput('prefix') || '';
+
+
+  let latestTag: string;
   try {
-    const ms: string = core.getInput('milliseconds')
-
-    // Debug logs are only output if the `ACTIONS_STEP_DEBUG` secret is true
-    core.debug(`Waiting ${ms} milliseconds ...`)
-
-    // Log the current timestamp, wait, then log the new timestamp
-    core.debug(new Date().toTimeString())
-    await wait(parseInt(ms, 10))
-    core.debug(new Date().toTimeString())
-
-    // Set outputs for other workflow steps to use
-    core.setOutput('time', new Date().toTimeString())
-  } catch (error) {
-    // Fail the workflow run if an error occurs
-    if (error instanceof Error) core.setFailed(error.message)
+    latestTag = await getLatestVersion(octokit, owner, repo, prefix);
+    core.info(`Latest tag: ${latestTag}`);
+  } catch (err: any) {
+    return core.setFailed(err.message);
   }
+
+  core.exportVariable('current', `${prefix}${latestTag}`);
+  core.setOutput('current', `${prefix}${latestTag}`);
+
+  let commits: Commit[];
+  try {
+    commits = await getCommits(octokit.rest, owner, repo, branch, latestTag);
+  } catch (err: any) {
+    return core.setFailed(err.message);
+  }
+
+  const [breaking, features, fixes] = await parseCommits(commits, prefix, latestTag);
+  let nextVersion = await bumpVersion(breaking.length, features.length, fixes.length, latestTag);
+
+  core.info(`Next version: ${nextVersion}`);
+  core.exportVariable('next', `${prefix}${nextVersion}`);
+  core.setOutput('next', `${prefix}${nextVersion}`);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises

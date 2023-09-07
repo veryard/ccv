@@ -1,19 +1,32 @@
-name: 'The name of your action here'
+name: 'Conventional Commits Versioning'
 description: 'Provide a description here'
-author: 'Your name or organization here'
+author: 'Brad'
 
 # Define your inputs here.
 inputs:
-  milliseconds:
-    description: 'Your input description here'
+  token:
+    description: GitHub Token
     required: true
-    default: '1000'
+  branch:
+    description: The branch to fetch commit history from
+    required: false
+    default: main
+  prefix:
+    description: The prefix to use for the tag
+    required: false
+    default: v
 
 # Define your outputs here.
 outputs:
-  time:
-    description: 'Your output description here'
+  old:
+    description: The old version
+  new:
+    description: The new version
 
 runs:
   using: node16
   main: dist/index.js
+
+branding:
+  icon: activity
+  color: blue
