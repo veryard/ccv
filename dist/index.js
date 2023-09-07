@@ -13946,6 +13946,7 @@ async function parseCommits(commits) {
                 case 'breaking':
                     breaking.push(commit.commit.message);
                     break;
+                case 'feat':
                 case 'feature':
                     features.push(commit.commit.message);
                     break;
