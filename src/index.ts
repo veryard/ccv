@@ -41,9 +41,7 @@ export async function run(): Promise<void> {
     return core.setFailed(err.message)
   }
 
-  const [breaking, features, fixes] = await parseCommits(
-    commits
-  )
+  const [breaking, features, fixes] = await parseCommits(commits)
 
   core.debug(`Breaking changes count: ${breaking.length}`)
   core.debug(`Features count: ${features.length}`)

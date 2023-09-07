@@ -13924,8 +13924,6 @@ async function getCommits(rest, owner, repo, branch, latestTag) {
         });
         const totalCommits = rawCommits.data.total_commits || 0;
         const rangeCommits = rawCommits.data.commits;
-        console.log(rangeCommits);
-        // convert rangeCommits to commits
         commits.push(...rangeCommits);
         if (rangeCommits.length < 100 || commits.length >= totalCommits) {
             break;
@@ -13937,14 +13935,13 @@ async function getCommits(rest, owner, repo, branch, latestTag) {
     return commits;
 }
 exports.getCommits = getCommits;
-async function parseCommits(commits, prefix, latestTag) {
+async function parseCommits(commits) {
     const breaking = [];
     const features = [];
     const fixes = [];
     for (const commit of commits) {
         try {
             const cast = (0, parser_1.toConventionalChangelogFormat)((0, parser_1.parser)(commit.commit.message));
-            console.log(cast.type);
             switch (cast.type) {
                 case 'breaking':
                     breaking.push(commit.commit.message);
@@ -14087,7 +14084,7 @@ async function run() {
         core.debug(err);
         return core.setFailed(err.message);
     }
-    const [breaking, features, fixes] = await (0, commits_1.parseCommits)(commits, prefix, latestTag);
+    const [breaking, features, fixes] = await (0, commits_1.parseCommits)(commits);
     core.debug(`Breaking changes count: ${breaking.length}`);
     core.debug(`Features count: ${features.length}`);
     core.debug(`Fixes count: ${fixes.length}`);
