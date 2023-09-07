@@ -47,16 +47,16 @@ export async function run(): Promise<void> {
   core.debug(`Features count: ${features.length}`)
   core.debug(`Fixes count: ${fixes.length}`)
 
-  let nextVersion = await bumpVersion(
+  let newVersion = await bumpVersion(
     breaking.length,
     features.length,
     fixes.length,
     latestTag
   )
 
-  core.info(`Next version: ${nextVersion}`)
-  core.exportVariable('next', `${prefix}${nextVersion}`)
-  core.setOutput('next', `${prefix}${nextVersion}`)
+  core.info(`New version: ${newVersion}`)
+  core.exportVariable('new', `${prefix}${newVersion}`)
+  core.setOutput('new', `${prefix}${newVersion}`)
 }
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
