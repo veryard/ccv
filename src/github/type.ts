@@ -1,33 +1,30 @@
-import { components } from "@octokit/openapi-types";
+import { components } from '@octokit/openapi-types'
 
-export interface GraphQLResponse {
-
-
-}
+export interface GraphQLResponse {}
 
 export interface GraphQLRepositoryResponse extends GraphQLResponse {
-  repository: Repository;
+  repository: Repository
 }
 
 export interface Repository {
-  refs: Refs;
+  refs: Refs
 }
 
 export interface Refs {
-  nodes: Node[];
+  nodes: Node[]
 }
 
 export interface Node {
-  name: string;
-  target: Target;
+  name: string
+  target: Target
 }
 
 export interface Target {
-  oid: string;
+  oid: string
 }
 
-export type Commit = components["schemas"]["commit"];
+export type Commit = components['schemas']['commit']
 
 export interface CommitDetails {
-  message: string;
+  message: string
 }
