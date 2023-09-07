@@ -29,8 +29,15 @@ export async function run(): Promise<void> {
 
   let commits: Commit[]
   try {
-    commits = await getCommits(octokit.rest, owner, repo, branch, latestTag)
+    commits = await getCommits(
+      octokit.rest,
+      owner,
+      repo,
+      branch,
+      `${prefix}${latestTag}`
+    )
   } catch (err: any) {
+    core.debug(err)
     return core.setFailed(err.message)
   }
 

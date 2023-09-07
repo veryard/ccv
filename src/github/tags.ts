@@ -9,18 +9,19 @@ export async function getLatestVersion(
 ): Promise<string> {
   const tags = await octokit.graphql<GraphQLRepositoryResponse>(
     `
-        query tags ($owner: String!, $repo: String!) {
-            repository (owner: $owner, name: $repo) {
-                refs(first: 10, refPrefix: "refs/tags/", orderBy: { field: TAG_COMMIT_DATE, direction: DESC }) {
-                    nodes {
-                        name
-                        target {
-                            oid
-                        }
-                    }
-                }
+    query lastTags ($owner: String!, $repo: String!) {
+      repository (owner: $owner, name: $repo) {
+        refs(first: 10, refPrefix: "refs/tags/", orderBy: { field: TAG_COMMIT_DATE, direction: DESC }) {
+          nodes {
+            name
+            target {
+              oid
             }
-        }`,
+          }
+        }
+      }
+    }
+    `,
     {
       owner,
       repo

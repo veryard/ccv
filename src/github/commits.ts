@@ -37,7 +37,6 @@ export async function getCommits(
   }
 
   if (!commits.length) {
-    throw new Error('No commits found')
   }
 
   return commits as Commit[]

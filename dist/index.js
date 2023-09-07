@@ -13898,6 +13898,7 @@ async function getCommits(rest, owner, repo, branch, latestTag) {
             page: currentPage,
             per_page: 100
         });
+        console.log(rawCommits);
         const totalCommits = rawCommits.data.total_commits || 0;
         const rangeCommits = rawCommits.data.commits || [];
         // convert rangeCommits to commits
@@ -13907,7 +13908,6 @@ async function getCommits(rest, owner, repo, branch, latestTag) {
         }
     }
     if (!commits.length) {
-        throw new Error('No commits found');
     }
     return commits;
 }
@@ -13955,18 +13955,19 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getLatestVersion = void 0;
 async function getLatestVersion(octokit, owner, repo, prefix) {
     const tags = await octokit.graphql(`
-        query tags ($owner: String!, $repo: String!) {
-            repository (owner: $owner, name: $repo) {
-                refs(first: 10, refPrefix: "refs/tags/", orderBy: { field: TAG_COMMIT_DATE, direction: DESC }) {
-                    nodes {
-                        name
-                        target {
-                            oid
-                        }
-                    }
-                }
+    query lastTags ($owner: String!, $repo: String!) {
+      repository (owner: $owner, name: $repo) {
+        refs(first: 10, refPrefix: "refs/tags/", orderBy: { field: TAG_COMMIT_DATE, direction: DESC }) {
+          nodes {
+            name
+            target {
+              oid
             }
-        }`, {
+          }
+        }
+      }
+    }
+    `, {
         owner,
         repo
     });
@@ -14052,9 +14053,10 @@ async function run() {
     core.setOutput('current', `${prefix}${latestTag}`);
     let commits;
     try {
-        commits = await (0, commits_1.getCommits)(octokit.rest, owner, repo, branch, latestTag);
+        commits = await (0, commits_1.getCommits)(octokit.rest, owner, repo, branch, `${prefix}${latestTag}`);
     }
     catch (err) {
+        core.debug(err);
         return core.setFailed(err.message);
     }
     const [breaking, features, fixes] = await (0, commits_1.parseCommits)(commits, prefix, latestTag);
