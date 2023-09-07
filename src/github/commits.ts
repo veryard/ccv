@@ -58,6 +58,7 @@ export async function parseCommits(
           breaking.push(commit.commit.message)
           break
 
+        case 'feat':
         case 'feature':
           features.push(commit.commit.message)
           break
