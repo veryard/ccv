@@ -23,15 +23,27 @@ export async function bumpVersion(
     case 'breaking':
       if (breaking > 0) {
         next = inc(next, 'major');
+      } else if (features > 0) {
+        next = inc(next, 'major');
+      } else if (fixes > 0) {
+        next = inc(next, 'major');
       }
       break;
     case 'feat':
-      if (features > 0) {
+      if (breaking > 0) {
+        next = inc(next, 'minor');
+      } else if (features > 0) {
+        next = inc(next, 'minor');
+      } else if (fixes > 0) {
         next = inc(next, 'minor');
       }
       break;
     case 'fix':
-      if (fixes > 0) {
+      if (breaking > 0) {
+        next = inc(next, 'patch');
+      } else if (features > 0) {
+        next = inc(next, 'patch');
+      } else if (fixes > 0) {
         next = inc(next, 'patch');
       }
       break;

@@ -14234,14 +14234,32 @@ async function bumpVersion(breaking, features, fixes, version, incrementType) {
             if (breaking > 0) {
                 next = (0, semver_1.inc)(next, 'major');
             }
+            else if (features > 0) {
+                next = (0, semver_1.inc)(next, 'major');
+            }
+            else if (fixes > 0) {
+                next = (0, semver_1.inc)(next, 'major');
+            }
             break;
         case 'feat':
-            if (features > 0) {
+            if (breaking > 0) {
+                next = (0, semver_1.inc)(next, 'minor');
+            }
+            else if (features > 0) {
+                next = (0, semver_1.inc)(next, 'minor');
+            }
+            else if (fixes > 0) {
                 next = (0, semver_1.inc)(next, 'minor');
             }
             break;
         case 'fix':
-            if (fixes > 0) {
+            if (breaking > 0) {
+                next = (0, semver_1.inc)(next, 'patch');
+            }
+            else if (features > 0) {
+                next = (0, semver_1.inc)(next, 'patch');
+            }
+            else if (fixes > 0) {
                 next = (0, semver_1.inc)(next, 'patch');
             }
             break;
