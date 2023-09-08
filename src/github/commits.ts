@@ -1,10 +1,10 @@
-import type { RestEndpointMethods } from '@octokit/plugin-rest-endpoint-methods/dist-types/generated/method-types'
-import { Commit } from './type'
-import * as core from '@actions/core'
+import type { RestEndpointMethods } from '@octokit/plugin-rest-endpoint-methods/dist-types/generated/method-types';
+import { Commit } from './type';
+import * as core from '@actions/core';
 import {
   parser,
   toConventionalChangelogFormat
-} from '@conventional-commits/parser'
+} from '@conventional-commits/parser';
 
 export async function getCommits(
   rest: RestEndpointMethods,
@@ -17,7 +17,7 @@ export async function getCommits(
   const commits: Commit[] = [];
 
   while (true) {
-    currentPage++
+    currentPage++;
     const rawCommits = await rest.repos.compareCommitsWithBasehead({
       owner,
       repo,

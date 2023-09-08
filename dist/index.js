@@ -13888,12 +13888,6 @@ exports.generateChangelog = void 0;
 async function generateChangelog(breaking, features, fixes, changes, version, prefix, owner, repo) {
     const builder = [];
     const repoUrl = `https://github.com/${owner}/${repo}`;
-    builder.push('## ');
-    builder.push(repo);
-    builder.push(' Changelogs ');
-    builder.push(prefix);
-    builder.push(version);
-    builder.push('\n\n');
     if (breaking.length > 0) {
         builder.push('### Breaking Changes\n\n');
         for (const commit of breaking) {
@@ -13922,7 +13916,10 @@ async function generateChangelog(breaking, features, fixes, changes, version, pr
         }
         builder.push('\n');
     }
-    return builder.join('');
+    let changelogsClean = builder.join('');
+    builder.unshift('## ', repo, ' Changelogs ', prefix, version, '\n\n');
+    let changelogs = builder.join('');
+    return [changelogsClean, changelogs];
 }
 exports.generateChangelog = generateChangelog;
 function formatCommit(commit, repoUrl) {
@@ -14016,6 +14013,8 @@ async function parseCommits(commits) {
             const cast = (0, parser_1.toConventionalChangelogFormat)((0, parser_1.parser)(commit.commit.message));
             switch (cast.type) {
                 case 'breaking':
+                case 'break':
+                case 'major':
                     breaking.push(commit);
                     break;
                 case 'feat':
@@ -14141,6 +14140,7 @@ async function run() {
     const token = core.getInput('token');
     const branch = core.getInput('branch');
     const octokit = github.getOctokit(token);
+    const incrementType = core.getInput('increment') || 'all';
     const { owner, repo } = github.context.repo;
     const prefix = core.getInput('prefix') || '';
     let latestTag;
@@ -14166,13 +14166,14 @@ async function run() {
     core.debug(`Features count: ${features.length}`);
     core.debug(`Fixes count: ${fixes.length}`);
     core.debug(`Other changes count: ${changes.length}`);
-    let newVersion = await (0, version_1.bumpVersion)(breaking.length, features.length, fixes.length, latestTag);
+    let newVersion = await (0, version_1.bumpVersion)(breaking.length, features.length, fixes.length, latestTag, incrementType);
     core.info(`New version: ${newVersion}`);
     core.exportVariable('new', `${prefix}${newVersion}`);
     core.setOutput('new', `${prefix}${newVersion}`);
     // Build changelogs
-    const changelogs = await (0, changlog_1.generateChangelog)(breaking, features, fixes, changes, newVersion, prefix, owner, repo);
-    core.info(`Changelogs: ${changelogs}`);
+    const [changelogsClean, changelogs] = await (0, changlog_1.generateChangelog)(breaking, features, fixes, changes, newVersion, prefix, owner, repo);
+    core.setOutput('changelogs_clean', changelogsClean);
+    core.exportVariable('changelogs_clean', changelogsClean);
     core.setOutput('changelogs', changelogs);
     core.exportVariable('changelogs', changelogs);
 }
@@ -14215,19 +14216,39 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.bumpVersion = void 0;
 const semver_1 = __nccwpck_require__(1383);
 const core = __importStar(__nccwpck_require__(2186));
-async function bumpVersion(breaking, features, fixes, version) {
+async function bumpVersion(breaking, features, fixes, version, incrementType) {
     let next = version;
-    if (breaking > 0) {
-        next = (0, semver_1.inc)(next, 'major');
+    switch (incrementType) {
+        case 'all':
+            if (breaking > 0) {
+                next = (0, semver_1.inc)(next, 'major');
+            }
+            else if (features > 0) {
+                next = (0, semver_1.inc)(next, 'minor');
+            }
+            else if (fixes > 0) {
+                next = (0, semver_1.inc)(next, 'patch');
+            }
+            break;
+        case 'breaking':
+            if (breaking > 0) {
+                next = (0, semver_1.inc)(next, 'major');
+            }
+            break;
+        case 'feat':
+            if (features > 0) {
+                next = (0, semver_1.inc)(next, 'minor');
+            }
+            break;
+        case 'fix':
+            if (fixes > 0) {
+                next = (0, semver_1.inc)(next, 'patch');
+            }
+            break;
     }
-    else if (features > 0) {
-        next = (0, semver_1.inc)(next, 'minor');
-    }
-    else if (fixes > 0) {
-        next = (0, semver_1.inc)(next, 'patch');
-    }
-    if (next == null) {
+    if (next === null) {
         core.info('No new version');
+        return version;
     }
     return next;
 }

@@ -1,10 +1,10 @@
-import * as core from '@actions/core'
-import * as github from '@actions/github'
-import { getLatestVersion } from './github/tags'
-import { getCommits, parseCommits } from './github/commits'
-import { Commit } from './github/type'
-import { bumpVersion } from './version'
-import { generateChangelog } from './changlog'
+import * as core from '@actions/core';
+import * as github from '@actions/github';
+import { getLatestVersion } from './github/tags';
+import { getCommits, parseCommits } from './github/commits';
+import { Commit } from './github/type';
+import { bumpVersion } from './version';
+import { generateChangelog } from './changlog';
 
 /**
  * The main function for the action.

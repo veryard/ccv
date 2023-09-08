@@ -1,4 +1,4 @@
-import { Commit } from './github/type'
+import { Commit } from './github/type';
 
 export async function generateChangelog(
   breaking: Commit[],
@@ -23,7 +23,7 @@ export async function generateChangelog(
   }
 
   if (features.length > 0) {
-    builder.push('### Features\n\n')
+    builder.push('### Features\n\n');
     for (const commit of features) {
       builder.push(formatCommit(commit, repoUrl));
     }
@@ -50,10 +50,7 @@ export async function generateChangelog(
   builder.unshift('## ', repo, ' Changelogs ', prefix, version, '\n\n');
   let changelogs = builder.join('');
 
-  return [
-    changelogsClean,
-    changelogs
-  ];
+  return [changelogsClean, changelogs];
 }
 
 function formatCommit(commit: Commit, repoUrl: string) {

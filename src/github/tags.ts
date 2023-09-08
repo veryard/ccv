@@ -1,5 +1,5 @@
-import type { Octokit } from '@octokit/core'
-import { GraphQLRepositoryResponse } from './type'
+import type { Octokit } from '@octokit/core';
+import { GraphQLRepositoryResponse } from './type';
 
 export async function getLatestVersion(
   octokit: Octokit,
