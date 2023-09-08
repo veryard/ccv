@@ -45,39 +45,46 @@ export async function getCommits(
 
 export async function parseCommits(
   commits: Commit[]
-): Promise<[string[], string[], string[]]> {
-  const breaking = []
-  const features = []
-  const fixes = []
+): Promise<[Commit[], Commit[], Commit[], Commit[]]> {
+  const breaking: Commit[] = []
+  const features: Commit[] = []
+  const fixes: Commit[] = []
+  const changes: Commit[] = []
 
   for (const commit of commits) {
     try {
       const cast = toConventionalChangelogFormat(parser(commit.commit.message))
       switch (cast.type) {
         case 'breaking':
-          breaking.push(commit.commit.message)
+          breaking.push(commit)
           break
 
         case 'feat':
         case 'feature':
-          features.push(commit.commit.message)
+          features.push(commit)
           break
 
         case 'fix':
-          fixes.push(commit.commit.message)
+          fixes.push(commit)
+          break
+
+        default:
+          changes.push(commit)
           break
       }
 
       for (const note of cast.notes) {
         if (note.title === 'BREAKING CHANGE') {
-          breaking.push(commit.commit.message)
+          breaking.push(commit)
         }
       }
     } catch (err: any) {
       core.debug(err)
-      core.warning(`Failed to parse commit: ${commit.commit.message}`)
+      core.warning(
+        `Failed to parse commit: (${commit.commit.url}) ${commit.commit.message}`
+      )
     }
   }
 
-  return [breaking, features, fixes]
+  return [breaking, features, fixes, changes]
 }

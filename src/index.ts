@@ -4,6 +4,7 @@ import { getLatestVersion } from './github/tags'
 import { getCommits, parseCommits } from './github/commits'
 import { Commit } from './github/type'
 import { bumpVersion } from './version'
+import { generateChangelog } from './changlog'
 
 /**
  * The main function for the action.
@@ -41,11 +42,12 @@ export async function run(): Promise<void> {
     return core.setFailed(err.message)
   }
 
-  const [breaking, features, fixes] = await parseCommits(commits)
+  const [breaking, features, fixes, changes] = await parseCommits(commits)
 
   core.debug(`Breaking changes count: ${breaking.length}`)
   core.debug(`Features count: ${features.length}`)
   core.debug(`Fixes count: ${fixes.length}`)
+  core.debug(`Other changes count: ${changes.length}`)
 
   let newVersion = await bumpVersion(
     breaking.length,
@@ -57,6 +59,23 @@ export async function run(): Promise<void> {
   core.info(`New version: ${newVersion}`)
   core.exportVariable('new', `${prefix}${newVersion}`)
   core.setOutput('new', `${prefix}${newVersion}`)
+
+  // Build changelogs
+
+  const changelogs = await generateChangelog(
+    breaking,
+    features,
+    fixes,
+    changes,
+    newVersion,
+    prefix,
+    owner,
+    repo
+  )
+
+  core.info(`Changelogs: ${changelogs}`)
+  core.setOutput('changelogs', changelogs)
+  core.exportVariable('changelogs', changelogs)
 }
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises

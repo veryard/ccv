@@ -13878,6 +13878,77 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
+/***/ 959:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.generateChangelog = void 0;
+async function generateChangelog(breaking, features, fixes, changes, version, prefix, owner, repo) {
+    const builder = [];
+    const repoUrl = `https://github.com/${owner}/${repo}`;
+    builder.push('## ');
+    builder.push(repo);
+    builder.push(' Changelogs ');
+    builder.push(prefix);
+    builder.push(version);
+    builder.push('\n\n');
+    if (breaking.length > 0) {
+        builder.push('### Breaking Changes\n\n');
+        for (const commit of breaking) {
+            builder.push(formatCommit(commit, repoUrl));
+        }
+        builder.push('\n');
+    }
+    if (features.length > 0) {
+        builder.push('### Features\n\n');
+        for (const commit of features) {
+            builder.push(formatCommit(commit, repoUrl));
+        }
+        builder.push('\n');
+    }
+    if (fixes.length > 0) {
+        builder.push('### Fixes\n\n');
+        for (const commit of fixes) {
+            builder.push(formatCommit(commit, repoUrl));
+        }
+        builder.push('\n');
+    }
+    if (changes.length > 0) {
+        builder.push('### Other Changes\n\n');
+        for (const commit of changes) {
+            builder.push(formatCommit(commit, repoUrl));
+        }
+        builder.push('\n');
+    }
+    return builder.join('');
+}
+exports.generateChangelog = generateChangelog;
+function formatCommit(commit, repoUrl) {
+    const sha = decodeURIComponent(commit.sha);
+    const shortSHA = sha.substring(0, 7);
+    const commitURL = `${repoUrl}/commit/${sha}`;
+    let message = decodeURIComponent(commit.commit.message);
+    const parts = message.split(':', 2);
+    if (parts.length === 2) {
+        parts[0] = parts[0].trim();
+        const start = parts[0].indexOf('(');
+        const end = parts[0].indexOf(')');
+        if (start !== -1 && end !== -1) {
+            parts[0] = `**${parts[0].substring(start + 1, end)}**: `;
+        }
+        else {
+            parts[0] = '';
+        }
+        message = parts[0] + parts[1].trim();
+    }
+    return `- ${message} ([${shortSHA}](${commitURL}))\n`;
+}
+
+
+/***/ }),
+
 /***/ 8366:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -13939,33 +14010,37 @@ async function parseCommits(commits) {
     const breaking = [];
     const features = [];
     const fixes = [];
+    const changes = [];
     for (const commit of commits) {
         try {
             const cast = (0, parser_1.toConventionalChangelogFormat)((0, parser_1.parser)(commit.commit.message));
             switch (cast.type) {
                 case 'breaking':
-                    breaking.push(commit.commit.message);
+                    breaking.push(commit);
                     break;
                 case 'feat':
                 case 'feature':
-                    features.push(commit.commit.message);
+                    features.push(commit);
                     break;
                 case 'fix':
-                    fixes.push(commit.commit.message);
+                    fixes.push(commit);
+                    break;
+                default:
+                    changes.push(commit);
                     break;
             }
             for (const note of cast.notes) {
                 if (note.title === 'BREAKING CHANGE') {
-                    breaking.push(commit.commit.message);
+                    breaking.push(commit);
                 }
             }
         }
         catch (err) {
             core.debug(err);
-            core.warning(`Failed to parse commit: ${commit.commit.message}`);
+            core.warning(`Failed to parse commit: (${commit.commit.url}) ${commit.commit.message}`);
         }
     }
-    return [breaking, features, fixes];
+    return [breaking, features, fixes, changes];
 }
 exports.parseCommits = parseCommits;
 
@@ -14057,6 +14132,7 @@ const github = __importStar(__nccwpck_require__(5438));
 const tags_1 = __nccwpck_require__(6116);
 const commits_1 = __nccwpck_require__(8366);
 const version_1 = __nccwpck_require__(1946);
+const changlog_1 = __nccwpck_require__(959);
 /**
  * The main function for the action.
  * @returns {Promise<void>} Resolves when the action is complete.
@@ -14085,14 +14161,20 @@ async function run() {
         core.debug(err);
         return core.setFailed(err.message);
     }
-    const [breaking, features, fixes] = await (0, commits_1.parseCommits)(commits);
+    const [breaking, features, fixes, changes] = await (0, commits_1.parseCommits)(commits);
     core.debug(`Breaking changes count: ${breaking.length}`);
     core.debug(`Features count: ${features.length}`);
     core.debug(`Fixes count: ${fixes.length}`);
+    core.debug(`Other changes count: ${changes.length}`);
     let newVersion = await (0, version_1.bumpVersion)(breaking.length, features.length, fixes.length, latestTag);
     core.info(`New version: ${newVersion}`);
     core.exportVariable('new', `${prefix}${newVersion}`);
     core.setOutput('new', `${prefix}${newVersion}`);
+    // Build changelogs
+    const changelogs = await (0, changlog_1.generateChangelog)(breaking, features, fixes, changes, newVersion, prefix, owner, repo);
+    core.info(`Changelogs: ${changelogs}`);
+    core.setOutput('changelogs', changelogs);
+    core.exportVariable('changelogs', changelogs);
 }
 exports.run = run;
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
