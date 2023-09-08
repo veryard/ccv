@@ -15,6 +15,10 @@ inputs:
     description: The prefix to use for the tag
     required: false
     default: v
+  increment:
+    description: Which version to increment (breaking, feat, fix, all)
+    required: false
+    default: all
 
 # Define your outputs here.
 outputs:
@@ -24,6 +28,8 @@ outputs:
     description: The new version
   changelogs:
     description: Markdown formatted changelogs
+  changelogs_clean:
+    description: Markdown formatted changelogs without the header
 
 runs:
   using: node16

@@ -11,24 +11,25 @@ import { generateChangelog } from './changlog'
  * @returns {Promise<void>} Resolves when the action is complete.
  */
 export async function run(): Promise<void> {
-  const token = core.getInput('token')
-  const branch = core.getInput('branch')
-  const octokit = github.getOctokit(token)
-  const { owner, repo } = github.context.repo
-  const prefix = core.getInput('prefix') || ''
+  const token = core.getInput('token');
+  const branch = core.getInput('branch');
+  const octokit = github.getOctokit(token);
+  const incrementType = core.getInput('increment') || 'all';
+  const { owner, repo } = github.context.repo;
+  const prefix = core.getInput('prefix') || '';
 
-  let latestTag: string
+  let latestTag: string;
   try {
-    latestTag = await getLatestVersion(octokit, owner, repo, prefix)
-    core.info(`Latest tag: ${latestTag}`)
+    latestTag = await getLatestVersion(octokit, owner, repo, prefix);
+    core.info(`Latest tag: ${latestTag}`);
   } catch (err: any) {
-    return core.setFailed(err.message)
+    return core.setFailed(err.message);
   }
 
-  core.exportVariable('current', `${prefix}${latestTag}`)
-  core.setOutput('current', `${prefix}${latestTag}`)
+  core.exportVariable('current', `${prefix}${latestTag}`);
+  core.setOutput('current', `${prefix}${latestTag}`);
 
-  let commits: Commit[]
+  let commits: Commit[];
   try {
     commits = await getCommits(
       octokit.rest,
@@ -36,33 +37,33 @@ export async function run(): Promise<void> {
       repo,
       branch,
       `${prefix}${latestTag}`
-    )
+    );
   } catch (err: any) {
-    core.debug(err)
-    return core.setFailed(err.message)
+    core.debug(err);
+    return core.setFailed(err.message);
   }
 
-  const [breaking, features, fixes, changes] = await parseCommits(commits)
+  const [breaking, features, fixes, changes] = await parseCommits(commits);
 
-  core.debug(`Breaking changes count: ${breaking.length}`)
-  core.debug(`Features count: ${features.length}`)
-  core.debug(`Fixes count: ${fixes.length}`)
-  core.debug(`Other changes count: ${changes.length}`)
+  core.debug(`Breaking changes count: ${breaking.length}`);
+  core.debug(`Features count: ${features.length}`);
+  core.debug(`Fixes count: ${fixes.length}`);
+  core.debug(`Other changes count: ${changes.length}`);
 
   let newVersion = await bumpVersion(
     breaking.length,
     features.length,
     fixes.length,
-    latestTag
-  )
+    latestTag,
+    incrementType
+  );
 
-  core.info(`New version: ${newVersion}`)
-  core.exportVariable('new', `${prefix}${newVersion}`)
-  core.setOutput('new', `${prefix}${newVersion}`)
+  core.info(`New version: ${newVersion}`);
+  core.exportVariable('new', `${prefix}${newVersion}`);
+  core.setOutput('new', `${prefix}${newVersion}`);
 
   // Build changelogs
-
-  const changelogs = await generateChangelog(
+  const [changelogsClean, changelogs] = await generateChangelog(
     breaking,
     features,
     fixes,
@@ -71,12 +72,14 @@ export async function run(): Promise<void> {
     prefix,
     owner,
     repo
-  )
+  );
 
-  core.info(`Changelogs: ${changelogs}`)
-  core.setOutput('changelogs', changelogs)
-  core.exportVariable('changelogs', changelogs)
+  core.setOutput('changelogs_clean', changelogsClean);
+  core.exportVariable('changelogs_clean', changelogsClean);
+
+  core.setOutput('changelogs', changelogs);
+  core.exportVariable('changelogs', changelogs);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
-run()
+run();

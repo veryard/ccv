@@ -13,8 +13,8 @@ export async function getCommits(
   branch: string,
   latestTag: string
 ): Promise<Commit[]> {
-  let currentPage = 0
-  const commits: Commit[] = []
+  let currentPage = 0;
+  const commits: Commit[] = [];
 
   while (true) {
     currentPage++
@@ -24,67 +24,69 @@ export async function getCommits(
       basehead: `${latestTag}...${branch}`,
       page: currentPage,
       per_page: 100
-    })
+    });
 
-    const totalCommits = rawCommits.data.total_commits || 0
-    const rangeCommits = rawCommits.data.commits
+    const totalCommits = rawCommits.data.total_commits || 0;
+    const rangeCommits = rawCommits.data.commits;
 
-    commits.push(...rangeCommits)
+    commits.push(...rangeCommits);
 
     if (rangeCommits.length < 100 || commits.length >= totalCommits) {
-      break
+      break;
     }
   }
 
   if (!commits.length) {
-    core.info('No commits found')
+    core.info('No commits found');
   }
 
-  return commits as Commit[]
+  return commits as Commit[];
 }
 
 export async function parseCommits(
   commits: Commit[]
 ): Promise<[Commit[], Commit[], Commit[], Commit[]]> {
-  const breaking: Commit[] = []
-  const features: Commit[] = []
-  const fixes: Commit[] = []
-  const changes: Commit[] = []
+  const breaking: Commit[] = [];
+  const features: Commit[] = [];
+  const fixes: Commit[] = [];
+  const changes: Commit[] = [];
 
   for (const commit of commits) {
     try {
-      const cast = toConventionalChangelogFormat(parser(commit.commit.message))
+      const cast = toConventionalChangelogFormat(parser(commit.commit.message));
       switch (cast.type) {
         case 'breaking':
-          breaking.push(commit)
-          break
+        case 'break':
+        case 'major':
+          breaking.push(commit);
+          break;
 
         case 'feat':
         case 'feature':
-          features.push(commit)
-          break
+          features.push(commit);
+          break;
 
         case 'fix':
-          fixes.push(commit)
-          break
+          fixes.push(commit);
+          break;
 
         default:
-          changes.push(commit)
-          break
+          changes.push(commit);
+          break;
       }
 
       for (const note of cast.notes) {
         if (note.title === 'BREAKING CHANGE') {
-          breaking.push(commit)
+          breaking.push(commit);
         }
       }
     } catch (err: any) {
-      core.debug(err)
+      core.debug(err);
       core.warning(
         `Failed to parse commit: (${commit.commit.url}) ${commit.commit.message}`
-      )
+      );
     }
   }
 
-  return [breaking, features, fixes, changes]
+  return [breaking, features, fixes, changes];
 }

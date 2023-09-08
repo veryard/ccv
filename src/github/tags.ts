@@ -26,30 +26,30 @@ export async function getLatestVersion(
       owner,
       repo
     }
-  )
+  );
 
-  const list = tags.repository.refs.nodes
+  const list = tags.repository.refs.nodes;
   if (list.length < 1) {
-    throw new Error('No tags found, please create one (e.g. v1.0.0)')
+    throw new Error('No tags found, please create one (e.g. v1.0.0)');
   }
 
-  let latestTag
+  let latestTag;
   for (const tag of list) {
     if (prefix) {
       tag.name = tag.name.startsWith(prefix)
         ? tag.name.replace(prefix, '')
-        : tag.name
+        : tag.name;
     }
 
     // TODO: Check if valid semver?
 
-    latestTag = tag
-    break
+    latestTag = tag;
+    break;
   }
 
   if (!latestTag) {
-    throw new Error('No valid tags found, please create one (e.g. v1.0.0)')
+    throw new Error('No valid tags found, please create one (e.g. v1.0.0)');
   }
 
-  return latestTag.name
+  return latestTag.name;
 }
