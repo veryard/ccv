@@ -60,3 +60,5 @@ jobs:
         run: |
           echo "${{ steps.test-action.outputs.new }}"
           echo "${{ steps.test-action.outputs.old }}"
+          echo "${{ steps.test-action.outputs.old_clean }}"
+          echo "${{ steps.test-action.outputs.new_clean }}"

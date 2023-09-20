@@ -65,6 +65,7 @@ export async function run(): Promise<void> {
   core.exportVariable('new', `${prefix}${newVersion}`);
   core.setOutput('new', `${prefix}${newVersion}`);
 
+  core.info(`Clean new version: ${newVersion}`);
   core.exportVariable('new_clean', `${newVersion}`);
   core.setOutput('new_clean', `${newVersion}`);
 
