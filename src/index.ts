@@ -26,11 +26,11 @@ export async function run(): Promise<void> {
     return core.setFailed(err.message);
   }
 
-  core.exportVariable('current', `${prefix}${latestTag}`);
-  core.setOutput('current', `${prefix}${latestTag}`);
+  core.exportVariable('old', `${prefix}${latestTag}`);
+  core.setOutput('old', `${prefix}${latestTag}`);
 
-  core.exportVariable('current_clean', latestTag);
-  core.setOutput('current_clean', latestTag);
+  core.exportVariable('old_clean', latestTag);
+  core.setOutput('old_clean', latestTag);
 
   let commits: Commit[];
   try {
@@ -65,6 +65,7 @@ export async function run(): Promise<void> {
   core.exportVariable('new', `${prefix}${newVersion}`);
   core.setOutput('new', `${prefix}${newVersion}`);
 
+  core.info(`Clean new version: ${newVersion}`);
   core.exportVariable('new_clean', `${newVersion}`);
   core.setOutput('new_clean', `${newVersion}`);
 

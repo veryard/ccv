@@ -13981,6 +13981,7 @@ const parser_1 = __nccwpck_require__(4523);
 async function getCommits(rest, owner, repo, branch, latestTag) {
     let currentPage = 0;
     const commits = [];
+    console.log(`Comparing ${latestTag}...${branch}`);
     while (true) {
         currentPage++;
         const rawCommits = await rest.repos.compareCommitsWithBasehead({
@@ -14057,7 +14058,7 @@ async function getLatestVersion(octokit, owner, repo, prefix) {
     const tags = await octokit.graphql(`
     query lastTags ($owner: String!, $repo: String!) {
       repository (owner: $owner, name: $repo) {
-        refs(first: 10, refPrefix: "refs/tags/", orderBy: { field: TAG_COMMIT_DATE, direction: DESC }) {
+        refs(first: 20, refPrefix: "refs/tags/", orderBy: { field: TAG_COMMIT_DATE, direction: DESC }) {
           nodes {
             name
             target {
@@ -14153,6 +14154,8 @@ async function run() {
     }
     core.exportVariable('current', `${prefix}${latestTag}`);
     core.setOutput('current', `${prefix}${latestTag}`);
+    core.exportVariable('current_clean', latestTag);
+    core.setOutput('current_clean', latestTag);
     let commits;
     try {
         commits = await (0, commits_1.getCommits)(octokit.rest, owner, repo, branch, `${prefix}${latestTag}`);
@@ -14170,6 +14173,9 @@ async function run() {
     core.info(`New version: ${newVersion}`);
     core.exportVariable('new', `${prefix}${newVersion}`);
     core.setOutput('new', `${prefix}${newVersion}`);
+    core.info(`Clean new version: ${newVersion}`);
+    core.exportVariable('new_clean', `${newVersion}`);
+    core.setOutput('new_clean', `${newVersion}`);
     // Build changelogs
     const [changelogsClean, changelogs] = await (0, changlog_1.generateChangelog)(breaking, features, fixes, changes, newVersion, prefix, owner, repo);
     core.setOutput('changelogs_clean', changelogsClean);
