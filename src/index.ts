@@ -29,6 +29,9 @@ export async function run(): Promise<void> {
   core.exportVariable('current', `${prefix}${latestTag}`);
   core.setOutput('current', `${prefix}${latestTag}`);
 
+  core.exportVariable('current_clean', latestTag);
+  core.setOutput('current_clean', latestTag);
+
   let commits: Commit[];
   try {
     commits = await getCommits(
@@ -61,6 +64,9 @@ export async function run(): Promise<void> {
   core.info(`New version: ${newVersion}`);
   core.exportVariable('new', `${prefix}${newVersion}`);
   core.setOutput('new', `${prefix}${newVersion}`);
+
+  core.exportVariable('new_clean', `${newVersion}`);
+  core.setOutput('new_clean', `${newVersion}`);
 
   // Build changelogs
   const [changelogsClean, changelogs] = await generateChangelog(

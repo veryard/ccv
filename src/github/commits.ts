@@ -16,6 +16,7 @@ export async function getCommits(
   let currentPage = 0;
   const commits: Commit[] = [];
 
+  console.log(`Comparing ${latestTag}...${branch}`);
   while (true) {
     currentPage++;
     const rawCommits = await rest.repos.compareCommitsWithBasehead({

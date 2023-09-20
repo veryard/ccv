@@ -11,7 +11,7 @@ export async function getLatestVersion(
     `
     query lastTags ($owner: String!, $repo: String!) {
       repository (owner: $owner, name: $repo) {
-        refs(first: 10, refPrefix: "refs/tags/", orderBy: { field: TAG_COMMIT_DATE, direction: DESC }) {
+        refs(first: 20, refPrefix: "refs/tags/", orderBy: { field: TAG_COMMIT_DATE, direction: DESC }) {
           nodes {
             name
             target {

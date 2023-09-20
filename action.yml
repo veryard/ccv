@@ -24,8 +24,12 @@ inputs:
 outputs:
   old:
     description: The old version
+  old_clean:
+    description: The old version without prefix
   new:
     description: The new version
+  new_clean:
+    description: The new version without prefix
   changelogs:
     description: Markdown formatted changelogs
   changelogs_clean:
