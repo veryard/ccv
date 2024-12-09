@@ -4,7 +4,7 @@ import { getLatestVersion } from './github/tags';
 import { getCommits, parseCommits } from './github/commits';
 import { Commit } from './github/type';
 import { bumpVersion } from './version';
-import { generateChangelog } from './changlog';
+import { formatChangelog, generateChangelog } from './changlog';
 
 /**
  * The main function for the action.
@@ -70,7 +70,7 @@ export async function run(): Promise<void> {
   core.setOutput('new_clean', `${newVersion}`);
 
   // Build changelogs
-  const [changelogsClean, changelogs] = await generateChangelog(
+  let changelog = await generateChangelog(
     breaking,
     features,
     fixes,
@@ -81,11 +81,18 @@ export async function run(): Promise<void> {
     repo
   );
 
+
+  const changelogsClean = formatChangelog(changelog, "plain");
   core.setOutput('changelogs_clean', changelogsClean);
   core.exportVariable('changelogs_clean', changelogsClean);
 
+  const changelogs = formatChangelog(changelog, "markdown");
   core.setOutput('changelogs', changelogs);
   core.exportVariable('changelogs', changelogs);
+
+  const bbcode = formatChangelog(changelog, "bbcode");
+  core.setOutput('changelogs_bbcode', bbcode);
+  core.exportVariable('changelogs_bbcode', bbcode);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises

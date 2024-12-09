@@ -13884,64 +13884,91 @@ function wrappy (fn, cb) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.generateChangelog = void 0;
+exports.formatChangelog = exports.generateChangelog = void 0;
 async function generateChangelog(breaking, features, fixes, changes, version, prefix, owner, repo) {
-    const builder = [];
     const repoUrl = `https://github.com/${owner}/${repo}`;
-    if (breaking.length > 0) {
-        builder.push('### Breaking Changes\n\n');
-        for (const commit of breaking) {
-            builder.push(formatCommit(commit, repoUrl));
-        }
-        builder.push('\n');
-    }
-    if (features.length > 0) {
-        builder.push('### Features\n\n');
-        for (const commit of features) {
-            builder.push(formatCommit(commit, repoUrl));
-        }
-        builder.push('\n');
-    }
-    if (fixes.length > 0) {
-        builder.push('### Fixes\n\n');
-        for (const commit of fixes) {
-            builder.push(formatCommit(commit, repoUrl));
-        }
-        builder.push('\n');
-    }
-    if (changes.length > 0) {
-        builder.push('### Other Changes\n\n');
-        for (const commit of changes) {
-            builder.push(formatCommit(commit, repoUrl));
-        }
-        builder.push('\n');
-    }
-    let changelogsClean = builder.join('');
-    builder.unshift('## ', repo, ' Changelogs ', prefix, version, '\n\n');
-    let changelogs = builder.join('');
-    return [changelogsClean, changelogs];
+    return {
+        title: `${repo} Changelogs ${prefix}${version}`,
+        repo,
+        version,
+        prefix,
+        breaking: breaking.map(c => parseCommit(c, repoUrl)),
+        features: features.map(c => parseCommit(c, repoUrl)),
+        fixes: fixes.map(c => parseCommit(c, repoUrl)),
+        changes: changes.map(c => parseCommit(c, repoUrl))
+    };
 }
 exports.generateChangelog = generateChangelog;
-function formatCommit(commit, repoUrl) {
+function parseCommit(commit, repoUrl) {
     const sha = decodeURIComponent(commit.sha);
-    const shortSHA = sha.substring(0, 7);
-    const commitURL = `${repoUrl}/commit/${sha}`;
-    let message = decodeURIComponent(commit.commit.message);
+    const message = decodeURIComponent(commit.commit.message);
+    const url = `${repoUrl}/commit/${sha}`;
     const parts = message.split(':', 2);
     if (parts.length === 2) {
-        parts[0] = parts[0].trim();
-        const start = parts[0].indexOf('(');
-        const end = parts[0].indexOf(')');
+        const scope = parts[0].trim();
+        const start = scope.indexOf('(');
+        const end = scope.indexOf(')');
         if (start !== -1 && end !== -1) {
-            parts[0] = `**${parts[0].substring(start + 1, end)}**: `;
+            return {
+                message: parts[1].trim(),
+                sha: sha.substring(0, 7),
+                url,
+                scope: scope.substring(start + 1, end)
+            };
         }
-        else {
-            parts[0] = '';
-        }
-        message = parts[0] + parts[1].trim();
     }
-    return `- ${message} ([${shortSHA}](${commitURL}))\n`;
+    return {
+        message: message.trim(),
+        sha: sha.substring(0, 7),
+        url
+    };
 }
+function formatChangelog(data, type) {
+    const formatters = {
+        markdown: {
+            title: (text) => `## ${text}`,
+            section: (text) => `### ${text}`,
+            scope: (text) => `**${text}**`,
+            link: (text, url) => `[${text}](${url})`
+        },
+        bbcode: {
+            title: (text) => `[b]${text}[/b]`,
+            section: (text) => `[b]${text}[/b]`,
+            scope: (text) => `[b]${text}[/b]`,
+            link: (text, url) => `[url=${url}]${text}[/url]`
+        },
+        plain: {
+            title: (text) => text,
+            section: (text) => text,
+            scope: (text) => text,
+            link: (text, url) => `${text} (${url})`
+        }
+    };
+    const fmt = formatters[type];
+    const builder = [];
+    function formatCommits(commits) {
+        return commits.map(commit => {
+            const scopeText = commit.scope ? `${fmt.scope(commit.scope)}: ` : '';
+            const link = fmt.link(commit.sha, commit.url);
+            return `- ${scopeText}${commit.message} (${link})\n`;
+        }).join('');
+    }
+    builder.push(`${fmt.title(data.title)}\n\n`);
+    if (data.breaking.length > 0) {
+        builder.push(`${fmt.section('Breaking Changes')}\n\n${formatCommits(data.breaking)}\n`);
+    }
+    if (data.features.length > 0) {
+        builder.push(`${fmt.section('Features')}\n\n${formatCommits(data.features)}\n`);
+    }
+    if (data.fixes.length > 0) {
+        builder.push(`${fmt.section('Fixes')}\n\n${formatCommits(data.fixes)}\n`);
+    }
+    if (data.changes.length > 0) {
+        builder.push(`${fmt.section('Other Changes')}\n\n${formatCommits(data.changes)}\n`);
+    }
+    return builder.join('');
+}
+exports.formatChangelog = formatChangelog;
 
 
 /***/ }),
@@ -14177,11 +14204,16 @@ async function run() {
     core.exportVariable('new_clean', `${newVersion}`);
     core.setOutput('new_clean', `${newVersion}`);
     // Build changelogs
-    const [changelogsClean, changelogs] = await (0, changlog_1.generateChangelog)(breaking, features, fixes, changes, newVersion, prefix, owner, repo);
+    let changelog = await (0, changlog_1.generateChangelog)(breaking, features, fixes, changes, newVersion, prefix, owner, repo);
+    const changelogsClean = (0, changlog_1.formatChangelog)(changelog, "plain");
     core.setOutput('changelogs_clean', changelogsClean);
     core.exportVariable('changelogs_clean', changelogsClean);
+    const changelogs = (0, changlog_1.formatChangelog)(changelog, "markdown");
     core.setOutput('changelogs', changelogs);
     core.exportVariable('changelogs', changelogs);
+    const bbcode = (0, changlog_1.formatChangelog)(changelog, "bbcode");
+    core.setOutput('changelogs_bbcode', bbcode);
+    core.exportVariable('changelogs_bbcode', bbcode);
 }
 exports.run = run;
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
