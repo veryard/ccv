@@ -44,29 +44,37 @@ export async function generateChangelog(
 
 function parseCommit(commit: Commit, repoUrl: string): ChangelogCommit {
   const sha = decodeURIComponent(commit.sha);
-  const message = decodeURIComponent(commit.commit.message);
-  const url = `${repoUrl}/commit/${sha}`;
+  try {
+    const message = decodeURIComponent(commit.commit.message);
+    const url = `${repoUrl}/commit/${sha}`;
 
-  const parts = message.split(':', 2);
-  if (parts.length === 2) {
-    const scope = parts[0].trim();
-    const start = scope.indexOf('(');
-    const end = scope.indexOf(')');
-    if (start !== -1 && end !== -1) {
-      return {
-        message: parts[1].trim(),
-        sha: sha.substring(0, 7),
-        url,
-        scope: scope.substring(start + 1, end)
-      };
+    const parts = message.split(':', 2);
+    if (parts.length === 2) {
+      const scope = parts[0].trim();
+      const start = scope.indexOf('(');
+      const end = scope.indexOf(')');
+      if (start !== -1 && end !== -1) {
+        return {
+          message: parts[1].trim(),
+          sha: sha.substring(0, 7),
+          url,
+          scope: scope.substring(start + 1, end)
+        };
+      }
     }
-  }
 
-  return {
-    message: message.trim(),
-    sha: sha.substring(0, 7),
-    url
-  };
+    return {
+      message: message.trim(),
+      sha: sha.substring(0, 7),
+      url
+    };
+  } catch (e) {
+    return {
+      message: '',
+      sha: sha.substring(0, 7),
+      url: '',
+    };
+  }
 }
 
 export function formatChangelog(data: ChangelogData, type: "markdown" | "bbcode" | "plain"): string {

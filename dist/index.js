@@ -13901,27 +13901,36 @@ async function generateChangelog(breaking, features, fixes, changes, version, pr
 exports.generateChangelog = generateChangelog;
 function parseCommit(commit, repoUrl) {
     const sha = decodeURIComponent(commit.sha);
-    const message = decodeURIComponent(commit.commit.message);
-    const url = `${repoUrl}/commit/${sha}`;
-    const parts = message.split(':', 2);
-    if (parts.length === 2) {
-        const scope = parts[0].trim();
-        const start = scope.indexOf('(');
-        const end = scope.indexOf(')');
-        if (start !== -1 && end !== -1) {
-            return {
-                message: parts[1].trim(),
-                sha: sha.substring(0, 7),
-                url,
-                scope: scope.substring(start + 1, end)
-            };
+    try {
+        const message = decodeURIComponent(commit.commit.message);
+        const url = `${repoUrl}/commit/${sha}`;
+        const parts = message.split(':', 2);
+        if (parts.length === 2) {
+            const scope = parts[0].trim();
+            const start = scope.indexOf('(');
+            const end = scope.indexOf(')');
+            if (start !== -1 && end !== -1) {
+                return {
+                    message: parts[1].trim(),
+                    sha: sha.substring(0, 7),
+                    url,
+                    scope: scope.substring(start + 1, end)
+                };
+            }
         }
+        return {
+            message: message.trim(),
+            sha: sha.substring(0, 7),
+            url
+        };
     }
-    return {
-        message: message.trim(),
-        sha: sha.substring(0, 7),
-        url
-    };
+    catch (e) {
+        return {
+            message: '',
+            sha: sha.substring(0, 7),
+            url: '',
+        };
+    }
 }
 function formatChangelog(data, type) {
     const formatters = {
