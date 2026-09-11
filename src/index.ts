@@ -6,10 +6,6 @@ import { Commit } from './github/type';
 import { bumpVersion } from './version';
 import { formatChangelog, generateChangelog } from './changlog';
 
-/**
- * The main function for the action.
- * @returns {Promise<void>} Resolves when the action is complete.
- */
 export async function run(): Promise<void> {
   const token = core.getInput('token');
   const branch = core.getInput('branch');
@@ -17,6 +13,8 @@ export async function run(): Promise<void> {
   const incrementType = core.getInput('increment') || 'all';
   const { owner, repo } = github.context.repo;
   const prefix = core.getInput('prefix') || '';
+  const scanBody = (core.getInput('scan_body') || 'true').toLowerCase() !== 'false';
+  const unknownBump = (core.getInput('unknown_bump') || 'none').toLowerCase();
 
   let latestTag: string;
   try {
@@ -46,7 +44,9 @@ export async function run(): Promise<void> {
     return core.setFailed(err.message);
   }
 
-  const [breaking, features, fixes, changes] = await parseCommits(commits);
+  const [breaking, features, fixes, changes] = await parseCommits(commits, {
+    scanBody
+  });
 
   core.debug(`Breaking changes count: ${breaking.length}`);
   core.debug(`Features count: ${features.length}`);
@@ -58,10 +58,14 @@ export async function run(): Promise<void> {
     features.length,
     fixes.length,
     latestTag,
-    incrementType
+    incrementType,
+    { changes: changes.length, unknownBump }
   );
 
-  core.info(`New version: ${newVersion}`);
+  const bumped = newVersion !== latestTag;
+  core.info(`New version: ${newVersion} (bumped: ${bumped})`);
+  core.setOutput('bumped', bumped ? 'true' : 'false');
+  core.exportVariable('bumped', bumped ? 'true' : 'false');
   core.exportVariable('new', `${prefix}${newVersion}`);
   core.setOutput('new', `${prefix}${newVersion}`);
 
@@ -69,7 +73,6 @@ export async function run(): Promise<void> {
   core.exportVariable('new_clean', `${newVersion}`);
   core.setOutput('new_clean', `${newVersion}`);
 
-  // Build changelogs
   let changelog = await generateChangelog(
     breaking,
     features,

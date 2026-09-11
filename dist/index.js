@@ -14011,7 +14011,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.parseCommits = exports.getCommits = void 0;
+exports.scanBodyForConventional = exports.parseCommits = exports.getCommits = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const parser_1 = __nccwpck_require__(4523);
 async function getCommits(rest, owner, repo, branch, latestTag) {
@@ -14040,61 +14040,128 @@ async function getCommits(rest, owner, repo, branch, latestTag) {
     return commits;
 }
 exports.getCommits = getCommits;
-async function parseCommits(commits) {
+async function parseCommits(commits, options) {
+    const scanBody = options?.scanBody ?? true;
     const breaking = [];
     const features = [];
     const fixes = [];
     const changes = [];
     for (const commit of commits) {
+        const message = commit.commit.message || '';
+        const headline = message.split('\n')[0] || '';
+        let headlineType = null;
+        let headlineBreaking = false;
+        let parsed = false;
         try {
-            const cast = (0, parser_1.toConventionalChangelogFormat)((0, parser_1.parser)(commit.commit.message));
-            switch (cast.type) {
-                case 'breaking':
-                case 'break':
-                case 'major':
-                    breaking.push(commit);
+            const cast = (0, parser_1.toConventionalChangelogFormat)((0, parser_1.parser)(message));
+            parsed = true;
+            headlineType = (cast.type || '').toLowerCase();
+            const notes = cast.notes || [];
+            for (const note of notes) {
+                if ((note.title || '').toUpperCase() === 'BREAKING CHANGE') {
+                    headlineBreaking = true;
                     break;
-                case 'feat':
-                case 'feature':
-                    features.push(commit);
-                    break;
-                case 'fix':
-                    fixes.push(commit);
-                    break;
-                default:
-                    changes.push(commit);
-                    break;
-            }
-            for (const note of cast.notes) {
-                if (note.title === 'BREAKING CHANGE') {
-                    breaking.push(commit);
                 }
+            }
+            if (/^[\w-]+(\([^)]*\))?!:/.test(headline.trim())) {
+                headlineBreaking = true;
             }
         }
         catch (err) {
-            core.debug(err);
-            core.warning(`Failed to parse commit: (${commit.commit.url}) ${commit.commit.message}`);
+            core.debug(`Unparsable headline, falling back to body scan: ${headline}`);
+            if (/^[\w-]+(\([^)]*\))?!:/.test(headline.trim())) {
+                headlineBreaking = true;
+            }
+        }
+        const isBreakingType = headlineType === 'breaking' ||
+            headlineType === 'break' ||
+            headlineType === 'major';
+        const isFeatType = headlineType === 'feat' || headlineType === 'feature';
+        const isFixType = headlineType === 'fix' ||
+            headlineType === 'perf' ||
+            headlineType === 'revert';
+        let bodyHasBreaking = false;
+        let bodyHasFeat = false;
+        let bodyHasFix = false;
+        if (scanBody) {
+            const found = scanBodyForConventional(message);
+            bodyHasBreaking = found.breaking;
+            bodyHasFeat = found.feat;
+            bodyHasFix = found.fix;
+        }
+        const breakingHit = headlineBreaking || isBreakingType || bodyHasBreaking;
+        const featHit = !breakingHit && (isFeatType || bodyHasFeat);
+        const fixHit = !breakingHit && !featHit && (isFixType || bodyHasFix);
+        if (breakingHit) {
+            breaking.push(commit);
+        }
+        else if (featHit) {
+            features.push(commit);
+        }
+        else if (fixHit) {
+            fixes.push(commit);
+        }
+        else {
+            if (!parsed) {
+                core.debug(`Non-conventional commit kept as change: ${headline}`);
+            }
+            changes.push(commit);
         }
     }
     return [breaking, features, fixes, changes];
 }
 exports.parseCommits = parseCommits;
+function scanBodyForConventional(message) {
+    const lines = message.split('\n');
+    let breaking = false;
+    let feat = false;
+    let fix = false;
+    for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line)
+            continue;
+        const stripped = line.replace(/^([-*]|\d+[.)])\s+/, '');
+        const match = stripped.match(/^(breaking|break|major|feat|feature|fix|perf|revert)(\([^)]*\))?(!)?\s*:/i);
+        if (!match)
+            continue;
+        const type = match[1].toLowerCase();
+        const bang = Boolean(match[3]);
+        if (bang || type === 'breaking' || type === 'break' || type === 'major') {
+            breaking = true;
+        }
+        else if (type === 'feat' || type === 'feature') {
+            feat = true;
+        }
+        else if (type === 'fix' || type === 'perf' || type === 'revert') {
+            fix = true;
+        }
+        if (/^BREAKING[ -]CHANGE\s*:/i.test(stripped)) {
+            breaking = true;
+        }
+    }
+    if (/^BREAKING[ -]CHANGE\s*:/im.test(message)) {
+        breaking = true;
+    }
+    return { breaking, feat, fix };
+}
+exports.scanBodyForConventional = scanBodyForConventional;
 
 
 /***/ }),
 
 /***/ 6116:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getLatestVersion = void 0;
+const semver_1 = __nccwpck_require__(1383);
 async function getLatestVersion(octokit, owner, repo, prefix) {
     const tags = await octokit.graphql(`
     query lastTags ($owner: String!, $repo: String!) {
       repository (owner: $owner, name: $repo) {
-        refs(first: 20, refPrefix: "refs/tags/", orderBy: { field: TAG_COMMIT_DATE, direction: DESC }) {
+        refs(first: 100, refPrefix: "refs/tags/", orderBy: { field: TAG_COMMIT_DATE, direction: DESC }) {
           nodes {
             name
             target {
@@ -14112,21 +14179,27 @@ async function getLatestVersion(octokit, owner, repo, prefix) {
     if (list.length < 1) {
         throw new Error('No tags found, please create one (e.g. v1.0.0)');
     }
-    let latestTag;
+    const candidates = [];
     for (const tag of list) {
+        const raw = tag.name;
+        let clean;
         if (prefix) {
-            tag.name = tag.name.startsWith(prefix)
-                ? tag.name.replace(prefix, '')
-                : tag.name;
+            if (!raw.startsWith(prefix)) {
+                continue;
+            }
+            clean = raw.slice(prefix.length);
         }
-        // TODO: Check if valid semver?
-        latestTag = tag;
-        break;
+        else {
+            clean = raw;
+        }
+        if ((0, semver_1.valid)(clean)) {
+            candidates.push(clean);
+        }
     }
-    if (!latestTag) {
+    if (candidates.length < 1) {
         throw new Error('No valid tags found, please create one (e.g. v1.0.0)');
     }
-    return latestTag.name;
+    return (0, semver_1.rsort)(candidates)[0];
 }
 exports.getLatestVersion = getLatestVersion;
 
@@ -14169,10 +14242,6 @@ const tags_1 = __nccwpck_require__(6116);
 const commits_1 = __nccwpck_require__(8366);
 const version_1 = __nccwpck_require__(1946);
 const changlog_1 = __nccwpck_require__(959);
-/**
- * The main function for the action.
- * @returns {Promise<void>} Resolves when the action is complete.
- */
 async function run() {
     const token = core.getInput('token');
     const branch = core.getInput('branch');
@@ -14180,6 +14249,8 @@ async function run() {
     const incrementType = core.getInput('increment') || 'all';
     const { owner, repo } = github.context.repo;
     const prefix = core.getInput('prefix') || '';
+    const scanBody = (core.getInput('scan_body') || 'true').toLowerCase() !== 'false';
+    const unknownBump = (core.getInput('unknown_bump') || 'none').toLowerCase();
     let latestTag;
     try {
         latestTag = await (0, tags_1.getLatestVersion)(octokit, owner, repo, prefix);
@@ -14200,19 +14271,23 @@ async function run() {
         core.debug(err);
         return core.setFailed(err.message);
     }
-    const [breaking, features, fixes, changes] = await (0, commits_1.parseCommits)(commits);
+    const [breaking, features, fixes, changes] = await (0, commits_1.parseCommits)(commits, {
+        scanBody
+    });
     core.debug(`Breaking changes count: ${breaking.length}`);
     core.debug(`Features count: ${features.length}`);
     core.debug(`Fixes count: ${fixes.length}`);
     core.debug(`Other changes count: ${changes.length}`);
-    let newVersion = await (0, version_1.bumpVersion)(breaking.length, features.length, fixes.length, latestTag, incrementType);
-    core.info(`New version: ${newVersion}`);
+    let newVersion = await (0, version_1.bumpVersion)(breaking.length, features.length, fixes.length, latestTag, incrementType, { changes: changes.length, unknownBump });
+    const bumped = newVersion !== latestTag;
+    core.info(`New version: ${newVersion} (bumped: ${bumped})`);
+    core.setOutput('bumped', bumped ? 'true' : 'false');
+    core.exportVariable('bumped', bumped ? 'true' : 'false');
     core.exportVariable('new', `${prefix}${newVersion}`);
     core.setOutput('new', `${prefix}${newVersion}`);
     core.info(`Clean new version: ${newVersion}`);
     core.exportVariable('new_clean', `${newVersion}`);
     core.setOutput('new_clean', `${newVersion}`);
-    // Build changelogs
     let changelog = await (0, changlog_1.generateChangelog)(breaking, features, fixes, changes, newVersion, prefix, owner, repo);
     const changelogsClean = (0, changlog_1.formatChangelog)(changelog, "plain");
     core.setOutput('changelogs_clean', changelogsClean);
@@ -14263,7 +14338,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.bumpVersion = void 0;
 const semver_1 = __nccwpck_require__(1383);
 const core = __importStar(__nccwpck_require__(2186));
-async function bumpVersion(breaking, features, fixes, version, incrementType) {
+async function bumpVersion(breaking, features, fixes, version, incrementType, options) {
+    const changes = options?.changes ?? 0;
+    const unknownBump = (options?.unknownBump ?? 'none').toLowerCase();
     let next = version;
     switch (incrementType) {
         case 'all':
@@ -14275,6 +14352,9 @@ async function bumpVersion(breaking, features, fixes, version, incrementType) {
             }
             else if (fixes > 0) {
                 next = (0, semver_1.inc)(next, 'patch');
+            }
+            else if (changes > 0) {
+                next = bumpUnknown(next, unknownBump);
             }
             break;
         case 'breaking':
@@ -14318,6 +14398,19 @@ async function bumpVersion(breaking, features, fixes, version, incrementType) {
     return next;
 }
 exports.bumpVersion = bumpVersion;
+function bumpUnknown(version, unknownBump) {
+    switch (unknownBump) {
+        case 'major':
+            return (0, semver_1.inc)(version, 'major');
+        case 'minor':
+            return (0, semver_1.inc)(version, 'minor');
+        case 'patch':
+            return (0, semver_1.inc)(version, 'patch');
+        case 'none':
+        default:
+            return version;
+    }
+}
 
 
 /***/ }),

@@ -6,8 +6,11 @@ export async function bumpVersion(
   features: number,
   fixes: number,
   version: string,
-  incrementType: string
+  incrementType: string,
+  options?: { changes?: number; unknownBump?: string }
 ): Promise<string> {
+  const changes = options?.changes ?? 0;
+  const unknownBump = (options?.unknownBump ?? 'none').toLowerCase();
   let next: string | null = version;
 
   switch (incrementType) {
@@ -18,6 +21,8 @@ export async function bumpVersion(
         next = inc(next, 'minor');
       } else if (fixes > 0) {
         next = inc(next, 'patch');
+      } else if (changes > 0) {
+        next = bumpUnknown(next, unknownBump);
       }
       break;
     case 'breaking':
@@ -55,4 +60,21 @@ export async function bumpVersion(
   }
 
   return next;
+}
+
+function bumpUnknown(
+  version: string,
+  unknownBump: string
+): string | null {
+  switch (unknownBump) {
+    case 'major':
+      return inc(version, 'major');
+    case 'minor':
+      return inc(version, 'minor');
+    case 'patch':
+      return inc(version, 'patch');
+    case 'none':
+    default:
+      return version;
+  }
 }

@@ -19,9 +19,19 @@ inputs:
     description: Which version to increment (breaking, feat, fix, all)
     required: false
     default: all
+  scan_body:
+    description: Scan commit bodies for conventional markers (fixes promotion commits like "API: Staging -> Main" with bullet lists)
+    required: false
+    default: 'true'
+  unknown_bump:
+    description: What to do when there are only non-conventional changes (none, patch, minor, major). Only applies to increment=all.
+    required: false
+    default: none
 
 # Define your outputs here.
 outputs:
+  bumped:
+    description: Whether the version was bumped (true/false)
   old:
     description: The old version
   old_clean:
@@ -34,6 +44,8 @@ outputs:
     description: Markdown formatted changelogs
   changelogs_clean:
     description: Markdown formatted changelogs without the header
+  changelogs_bbcode:
+    description: BBCode formatted changelogs
 
 runs:
   using: node20
