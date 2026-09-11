@@ -20,7 +20,7 @@ inputs:
     required: false
     default: all
   scan_body:
-    description: Scan commit bodies for conventional markers (fixes promotion commits like "API: Staging -> Main" with bullet lists)
+    description: 'Scan commit bodies for conventional markers (fixes promotion commits like "API: Staging -> Main" with bullet lists)'
     required: false
     default: 'true'
   unknown_bump:
